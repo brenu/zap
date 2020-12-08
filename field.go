@@ -147,6 +147,14 @@ func Float32p(key string, val *float32) Field {
 	return Float32(key, *val)
 }
 
+// InlineObject adds an object's fields to the logger without adding a nested object.
+func InlineObject(val zapcore.ObjectMarshaler) Field {
+	return zapcore.Field{
+		Type:      zapcore.InlineObjectMarshalerType,
+		Interface: val,
+	}
+}
+
 // Int constructs a field with the given key and value.
 func Int(key string, val int) Field {
 	return Int64(key, int64(val))
