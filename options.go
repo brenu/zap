@@ -58,7 +58,13 @@ func Hooks(hooks ...func(zapcore.Entry) error) Option {
 	})
 }
 
-// HooksWithFields similiar with Hooks, but hook funcs can access fields
+// HooksWithFields is similar to Hooks, but allows access to fields in
+// addition to the entry.
+//
+// It's important to mention that zapcore fields are read-only, so they can't
+// be added or modified. Also, as the process of using HooksWithFields requires
+// to store the fields separately, consider that there will certainly be a
+// performance impact.
 func HooksWithFields(hooks ...func(zapcore.Entry, []zapcore.Field) error) Option {
 	return optionFunc(func(log *Logger) {
 		log.core = zapcore.RegisterHooksWithFields(log.core, hooks...)
