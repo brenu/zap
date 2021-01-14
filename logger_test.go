@@ -44,13 +44,21 @@ func makeCountingHook() (func(zapcore.Entry) error, *atomic.Int64) {
 	return h, count
 }
 
-func makeCountingHookWithFields() (func(zapcore.Entry, []zapcore.Field) error, *atomic.Int64) {
-	count := &atomic.Int64{}
-	h := func(zapcore.Entry, []zapcore.Field) error {
-		count.Inc()
+func makeCountingHookWithFields() (func(zapcore.Entry, []zapcore.Field) error, *atomic.Int64, *atomic.Int64) {
+	entriesCount := &atomic.Int64{}
+	fieldsCount := &atomic.Int64{}
+
+	h := func(entry zapcore.Entry, fields []zapcore.Field) error {
+		entriesCount.Inc()
+
+		for i := 0; i < len(fields); i++ {
+			fieldsCount.Inc()
+		}
+
 		return nil
 	}
-	return h, count
+
+	return h, entriesCount, fieldsCount
 }
 
 func TestLoggerAtomicLevel(t *testing.T) {
@@ -515,12 +523,21 @@ func TestLoggerHooks(t *testing.T) {
 }
 
 func TestLoggerHooksWithFields(t *testing.T) {
-	hook, seen := makeCountingHookWithFields()
+	hook, seenEntries, seenFields := makeCountingHookWithFields()
+
 	withLogger(t, DebugLevel, opts(HooksWithFields(hook)), func(logger *Logger, logs *observer.ObservedLogs) {
-		logger.Debug("")
-		logger.Info("")
+		sampleField := Field{
+			Key:    "field",
+			Type:   zapcore.StringType,
+			String: "sample",
+		}
+
+		logger.With(sampleField).Debug("")
+		logger.With(sampleField).With(sampleField).Info("")
 	})
-	assert.Equal(t, int64(2), seen.Load(), "Hook saw an unexpected number of logs.")
+
+	assert.Equal(t, int64(2), seenEntries.Load(), "Hook saw an unexpected number of logs.")
+	assert.Equal(t, int64(3), seenFields.Load(), "Hook saw an unexpected number of logs.")
 }
 
 func TestLoggerConcurrent(t *testing.T) {
